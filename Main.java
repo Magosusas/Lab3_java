@@ -1,4 +1,5 @@
 import java.util.Scanner;
+import java.sql.SQLException;
 
 // Клас для опису ігрового поля
 class GameBoard {
@@ -102,39 +103,66 @@ public class Main {
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
 
+        // Підключаємося до бази даних
+        Db db = null;
+        try {
+            db = new Db("jdbc:postgresql://localhost:5432/postgres", "postgres", "qW67B*p&`12");
+        } catch (SQLException e) {
+            System.out.println("Failed to connect to the database.");
+            e.printStackTrace();
+            return;
+        }
+
+        // Логін гравців
+        Player player1 = null;
+        Player player2 = null;
+
+        while (player1 == null) {
+            System.out.println("Player 1, enter your username:");
+            String username = scanner.nextLine();
+            System.out.println("Player 1, enter your password:");
+            String password = scanner.nextLine();
+
+            if (db.authenticatePlayer(username, password)) {
+                player1 = new Player(username, 'X');
+            } else {
+                System.out.println("Invalid login for Player 1, try again.");
+            }
+        }
+
+        while (player2 == null) {
+            System.out.println("Player 2, enter your username:");
+            String username = scanner.nextLine();
+            System.out.println("Player 2, enter your password:");
+            String password = scanner.nextLine();
+
+            if (db.authenticatePlayer(username, password)) {
+                player2 = new Player(username, 'O');
+            } else {
+                System.out.println("Invalid login for Player 2, try again.");
+            }
+        }
+
         // Створюємо ігрове поле
         GameBoard gameBoard = new GameBoard();
-
-        // Створюємо двох гравців
-        System.out.println("Enter name for Player 1 (X):");
-        String player1Name = scanner.nextLine();
-        Player player1 = new Player(player1Name, 'X');
-
-        System.out.println("Enter name for Player 2 (O):");
-        String player2Name = scanner.nextLine();
-        Player player2 = new Player(player2Name, 'O');
 
         // Починаємо гру
         boolean gameOver = false;
         Player currentPlayer = player1;
 
-        // Виводимо початкове ігрове поле
         gameBoard.displayBoard();
 
         while (!gameOver) {
             System.out.println(currentPlayer.getSymbol() + "'s turn!");
             int[] move = currentPlayer.makeMove();
 
-            // Оновлюємо ігрове поле, якщо хід валідний
             if (gameBoard.updateBoard(move[0], move[1], currentPlayer.getSymbol())) {
                 gameBoard.displayBoard();
 
-                // Перевіряємо чи є переможець
                 if (gameBoard.checkWin(currentPlayer.getSymbol())) {
                     System.out.println("Player " + currentPlayer.getName() + " wins!");
                     gameOver = true;
                 } else {
-                    // Перемикаємо гравця
                     currentPlayer = (currentPlayer == player1) ? player2 : player1;
                 }
             } else {
@@ -143,5 +171,8 @@ public class Main {
         }
 
         System.out.println("Game over!");
+
+        // Закриваємо з'єднання з базою даних
+        db.close();
     }
 }
